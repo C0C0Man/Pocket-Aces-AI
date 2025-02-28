@@ -1,11 +1,15 @@
-import * as fs from "fs";
-import { ChatOpenAI } from "@langchain/openai";
+import {
+  AgentKit,
+  CdpWalletProvider,
+  cdpApiActionProvider,
+} from "@coinbase/agentkit";
+import { getLangChainTools } from "@coinbase/agentkit-langchain";
 import { HumanMessage } from "@langchain/core/messages";
-import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { MemorySaver } from "@langchain/langgraph";
-import { CdpAgent } from "@coinbase/cdp-langchain";
-import { AgentKit } from "@coinbase/cdp-agentkit-core";
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import { ChatOpenAI } from "@langchain/openai";
 import * as dotenv from "dotenv";
+import * as fs from "fs";
 import * as readline from "readline";
 
 dotenv.config();
@@ -20,8 +24,12 @@ function validateEnvironment(): void {
   const missingVars: string[] = [];
 
   // Check required variables
-  const requiredVars = ["XAI_API_KEY", "CDP_API_KEY_NAME", "CDP_API_KEY_PRIVATE_KEY"];
-  requiredVars.forEach(varName => {
+  const requiredVars = [
+    "OPENAI_API_KEY",
+    "CDP_API_KEY_NAME",
+    "CDP_API_KEY_PRIVATE_KEY",
+  ];
+  requiredVars.forEach((varName) => {
     if (!process.env[varName]) {
       missingVars.push(varName);
     }
@@ -30,7 +38,7 @@ function validateEnvironment(): void {
   // Exit if any required variables are missing
   if (missingVars.length > 0) {
     console.error("Error: Required environment variables are not set");
-    missingVars.forEach(varName => {
+    missingVars.forEach((varName) => {
       console.error(`${varName}=your_${varName.toLowerCase()}_here`);
     });
     process.exit(1);
@@ -38,7 +46,9 @@ function validateEnvironment(): void {
 
   // Warn about optional NETWORK_ID
   if (!process.env.NETWORK_ID) {
-    console.warn("Warning: NETWORK_ID not set, defaulting to base-sepolia testnet");
+    console.warn(
+      "Warning: NETWORK_ID not set, defaulting to base-sepolia testnet",
+    );
   }
 }
 
@@ -55,13 +65,9 @@ const WALLET_DATA_FILE = "wallet_data.txt";
  */
 async function initializeAgent() {
   try {
-    // Initialize LLM with xAI configuration
+    // Initialize LLM
     const llm = new ChatOpenAI({
-      model: "grok-beta",
-      apiKey: process.env.XAI_API_KEY,
-      configuration: {
-        baseURL: "https://api.x.ai/v1",
-      }
+      model: "gpt-4o-mini",
     });
 
     let walletDataStr: string | null = null;
@@ -76,35 +82,60 @@ async function initializeAgent() {
       }
     }
 
-    // Configure CDP Agentkit
+    // Configure CDP Wallet Provider
     const config = {
+      apiKeyName: process.env.CDP_API_KEY_NAME,
+      apiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY?.replace(
+        /\\n/g,
+        "\n",
+      ),
       cdpWalletData: walletDataStr || undefined,
       networkId: process.env.NETWORK_ID || "base-sepolia",
     };
 
-    // Initialize CDP AgentKit
-    const agentKit = await AgentKit.create(config);
+    const walletProvider = await CdpWalletProvider.configureWithWallet(config);
 
-    // Initialize CDP Agent and get tools
-    const cdpAgent = new CdpAgent(agentKit);
-    const tools = cdpAgent.getTools();
+    // Initialize AgentKit
+    const agentkit = await AgentKit.from({
+      walletProvider,
+      actionProviders: [
+        cdpApiActionProvider({
+          apiKeyName: process.env.CDP_API_KEY_NAME,
+          apiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY?.replace(
+            /\\n/g,
+            "\n",
+          ),
+        }),
+      ],
+    });
+
+    const tools = await getLangChainTools(agentkit);
 
     // Store buffered conversation history in memory
     const memory = new MemorySaver();
-    const agentConfig = { configurable: { thread_id: "CDP Agentkit Chatbot Example!" } };
+    const agentConfig = {
+      configurable: { thread_id: "CDP AgentKit Chatbot Example!" },
+    };
 
-    // Create React Agent using the LLM and CDP Agentkit tools
+    // Create React Agent using the LLM and CDP AgentKit tools
     const agent = createReactAgent({
       llm,
       tools,
       checkpointSaver: memory,
-      messageModifier:
-        "You are a helpful agent that can interact onchain using the Coinbase Developer Platform Agentkit. You are empowered to interact onchain using your tools. If you ever need funds, you can request them from the faucet if you are on network ID `base-sepolia`. If not, you can provide your wallet details and request funds from the user. If someone asks you to do something you can't do with your currently available tools, you must say so, and encourage them to implement it themselves using the CDP SDK + Agentkit, recommend they go to docs.cdp.coinbase.com for more informaton. Be concise and helpful with your responses. Refrain from restating your tools' descriptions unless it is explicitly requested.",
+      messageModifier: `
+            You are a poker-playing agent that can interact on-chain using the Coinbase Developer Platform AgentKit. Your role is to participate in Texas Hold'em games by making strategic betting decisions based on your hand, the community cards, and the game state. You are empowered to interact on-chain using your tools to place bets, check, call, raise, or fold as needed.
+    
+    If you ever need funds, you can request them from the faucet if you are on network ID 'base-sepolia'. Otherwise, you can provide your wallet details and request funds from the user. Before executing your first action, retrieve your wallet details to determine the network you're on.
+    
+    When making decisions, consider probabilities, opponent behavior, and standard poker strategies. If you encounter a 5XX (internal) HTTP error code, ask the user to try again later. If someone asks you to perform an action outside your available tools, you must say so and encourage them to implement it themselves using the CDP SDK + AgentKit. Recommend they visit docs.cdp.coinbase.com for more information.
+    
+    Be concise and strategic in your responses. Avoid restating your tools' descriptions unless explicitly requested. Focus on playing the best possible poker strategy while interacting on-chain.
+        `,
     });
 
     // Save wallet data
-    const exportedWallet = await agentKit.exportWallet();
-    fs.writeFileSync(WALLET_DATA_FILE, exportedWallet);
+    const exportedWallet = await walletProvider.exportWallet();
+    fs.writeFileSync(WALLET_DATA_FILE, JSON.stringify(exportedWallet));
 
     return { agent, config: agentConfig };
   } catch (error) {
@@ -131,7 +162,10 @@ async function runAutonomousMode(agent: any, config: any, interval = 10) {
         "Be creative and do something interesting on the blockchain. " +
         "Choose an action or set of actions and execute it that highlights your abilities.";
 
-      const stream = await agent.stream({ messages: [new HumanMessage(thought)] }, config);
+      const stream = await agent.stream(
+        { messages: [new HumanMessage(thought)] },
+        config,
+      );
 
       for await (const chunk of stream) {
         if ("agent" in chunk) {
@@ -142,7 +176,7 @@ async function runAutonomousMode(agent: any, config: any, interval = 10) {
         console.log("-------------------");
       }
 
-      await new Promise(resolve => setTimeout(resolve, interval * 1000));
+      await new Promise((resolve) => setTimeout(resolve, interval * 1000));
     } catch (error) {
       if (error instanceof Error) {
         console.error("Error:", error.message);
@@ -168,7 +202,7 @@ async function runChatMode(agent: any, config: any) {
   });
 
   const question = (prompt: string): Promise<string> =>
-    new Promise(resolve => rl.question(prompt, resolve));
+    new Promise((resolve) => rl.question(prompt, resolve));
 
   try {
     // eslint-disable-next-line no-constant-condition
@@ -179,7 +213,10 @@ async function runChatMode(agent: any, config: any) {
         break;
       }
 
-      const stream = await agent.stream({ messages: [new HumanMessage(userInput)] }, config);
+      const stream = await agent.stream(
+        { messages: [new HumanMessage(userInput)] },
+        config,
+      );
 
       for await (const chunk of stream) {
         if ("agent" in chunk) {
@@ -212,7 +249,7 @@ async function chooseMode(): Promise<"chat" | "auto"> {
   });
 
   const question = (prompt: string): Promise<string> =>
-    new Promise(resolve => rl.question(prompt, resolve));
+    new Promise((resolve) => rl.question(prompt, resolve));
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -258,7 +295,7 @@ async function main() {
 
 if (require.main === module) {
   console.log("Starting Agent...");
-  main().catch(error => {
+  main().catch((error) => {
     console.error("Fatal error:", error);
     process.exit(1);
   });
