@@ -8,7 +8,7 @@ import {
     walletActionProvider,
 } from "@coinbase/agentkit";
 import { parseArgs } from "util";
-import TexasHoldem from "./TexasHoldem";
+import TexasHoldem from "./TexasHoldem.json";
 import {encodeFunctionData } from "viem";
 import { z } from "zod";
 
@@ -36,7 +36,7 @@ class MyActionProvider extends ActionProvider<WalletProvider> {
     
 
     const data = encodeFunctionData({
-        abi:,
+        abi: pokerABI.abi,
         functionName: "fold",
         args:[]
     })
