@@ -60,7 +60,8 @@ async function main() {
       console.log("6. Get game status");
       console.log("7. Get spectator count");
       console.log("8. Get AI player balances");
-      console.log("9. Exit");
+      console.log("9. Hard reset game");
+      console.log("10. Exit");
 
       const choice = await askQuestion("Choose an option (1-9): ");
 
@@ -90,6 +91,9 @@ async function main() {
           await getAIBalances(contract1);
           break;
         case "9":
+          await hardResetGame(contract1);
+          break;
+        case "10":
           console.log("Exiting...");
           rl.close();
           return;
@@ -309,3 +313,26 @@ async function getAIBalances(contract: ethers.Contract) {
 
 // Run the main function
 main().catch(console.error);
+
+
+// Hard reset the game
+async function hardResetGame(contract: ethers.Contract) {
+  try {
+    const confirmation = await askQuestion("Are you sure you want to perform a hard reset? This will refund all spectator bets and reset the game state. (y/n): ");
+    
+    if (confirmation.toLowerCase() !== 'y' && confirmation.toLowerCase() !== 'yes') {
+      console.log("Hard reset cancelled.");
+      return;
+    }
+    
+    console.log("Performing hard reset...");
+    const tx = await contract.hardReset();
+    console.log(`Transaction hash: ${tx.hash}`);
+    
+    const receipt = await tx.wait();
+    console.log(`Transaction confirmed in block ${receipt.blockNumber}`);
+    console.log("Game has been reset successfully");
+  } catch (error) {
+    console.error("Error performing hard reset:", error);
+  }
+}
