@@ -153,14 +153,13 @@ class PokerActionProvider extends ActionProvider<WalletProvider> {
   async raiseAction(
     walletProvider: CdpWalletProvider,
     args: z.infer<typeof SendActionsSchema>,
-    amount: bigint,
   ): Promise<string> {
 
 
   const data = encodeFunctionData({
     abi: pokerABI.abi,
     functionName: "raiseBet",
-    args:[amount]
+    args:[args.amount]
   })
 
   const txHash = await walletProvider.sendTransaction({

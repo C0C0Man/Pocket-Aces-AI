@@ -152,24 +152,35 @@ async function joinAsSpectator(contract: ethers.Contract, wallet: ethers.Wallet)
       }
     }
     
-    if (playerAddresses.length === 0) {
-      console.log("No AI players registered yet. Cannot bet.");
-      return;
-    }
-    
+    // Option to manually enter an AI address
     console.log("Available AI players to bet on:");
     playerAddresses.forEach((address, index) => {
       console.log(`${index + 1}: ${address}`);
     });
+    console.log("M: Manually enter an AI address");
     
-    const selectedIndex = parseInt(await askQuestion(`Select an AI player (1-${playerAddresses.length}): `)) - 1;
+    const selection = await askQuestion(`Select an option (1-${playerAddresses.length} or M): `);
     
-    if (selectedIndex < 0 || selectedIndex >= playerAddresses.length) {
-      console.log("Invalid selection");
-      return;
+    let selectedAI: string;
+    
+    if (selection.toUpperCase() === 'M') {
+      // Allow user to manually enter an address
+      selectedAI = await askQuestion("Enter the autonomous agent address: ");
+      
+      // Basic validation for Ethereum address
+      if (!selectedAI.startsWith('0x') || selectedAI.length !== 42) {
+        console.log("Invalid Ethereum address format. Should be 0x followed by 40 hex characters.");
+        return;
+      }
+    } else {
+      const selectedIndex = parseInt(selection) - 1;
+      if (selectedIndex < 0 || selectedIndex >= playerAddresses.length) {
+        console.log("Invalid selection");
+        return;
+      }
+      selectedAI = playerAddresses[selectedIndex];
     }
     
-    const selectedAI = playerAddresses[selectedIndex];
     console.log(`Joining as spectator and betting on AI: ${selectedAI}`);
     
     // 0.0002 ETH in wei
