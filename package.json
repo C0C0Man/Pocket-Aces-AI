@@ -16,7 +16,8 @@
     "lint:fix": "turbo run lint:fix",
     "test:types": "turbo run test:types",
     "start": "ts-node chatbot.ts",
-    "start:chatbot2": "ts-node chatbot2.ts"
+    "start:chatbot2": "ts-node chatbot2.ts",
+    "cli": "ts-node cliTester.ts"
   },
   "author": "Coinbase Inc.",
   "license": "Apache-2.0",
