@@ -32,7 +32,7 @@ async function main() {
 
     // Setup provider
     console.log("Setting up provider...");
-    const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL || "https://base-sepolia.g.alchemy.com/v2/demo");
+    const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL || "https://base-sepolia.g.alchemy.com/v2/G8YH_EdJ8ArW5bB-8vU4oV3i5wFbOMZf");
 
     // First wallet - for main operations and spectator 1
     const privateKey1 = process.env.PRIVATE_KEY1 || await askQuestion("Enter private key for first wallet: ");
