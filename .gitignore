@@ -1,0 +1,19 @@
+# Node modules
+node_modules/
+
+# Environment files
+.env
+
+# Build artifacts
+dist/
+out/
+
+# VS Code settings
+.vscode/
+
+# Dependencies
+package-lock.json
+yarn.lock
+
+# Logs
+*.log
