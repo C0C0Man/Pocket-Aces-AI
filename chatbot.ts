@@ -328,7 +328,7 @@ async function initializeAgent() {
         "\n",
       ),
       cdpWalletData: walletDataStr || undefined,
-      networkId: process.env.NETWORK_ID || "base-sepolia",
+      networkId: "base-sepolia", // Hardcoded to ensure correct network
     };
 
     const walletProvider = await CdpWalletProvider.configureWithWallet(config);
