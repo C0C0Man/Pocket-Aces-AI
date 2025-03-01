@@ -2,6 +2,11 @@ import {
   AgentKit,
   CdpWalletProvider,
   cdpApiActionProvider,
+  walletActionProvider,
+  ActionProvider,
+  WalletProvider,
+  Network,
+  CreateAction,
 } from "@coinbase/agentkit";
 import { getLangChainTools } from "@coinbase/agentkit-langchain";
 import { HumanMessage } from "@langchain/core/messages";
@@ -11,6 +16,10 @@ import { ChatOpenAI } from "@langchain/openai";
 import * as dotenv from "dotenv";
 import * as fs from "fs";
 import * as readline from "readline";
+import TexasHoldem from "./TexasHoldem.json";
+import {encodeFunctionData } from "viem";
+import { z } from "zod";
+
 
 dotenv.config();
 
@@ -63,6 +72,236 @@ const WALLET_DATA_FILE = "wallet_data.txt";
  *
  * @returns Agent executor and config
  */
+
+const contractAddress = "0x9BEEf0b0a88d419b162b0aEb1e91F17467Ea8447";
+
+
+export const MyActionSchema = z.object({
+    myField: z.string(),
+});
+
+export const SendActionsSchema = z.object({
+    myField: z.string(),
+    amount: z.bigint(),
+});
+
+const pokerABI = TexasHoldem;
+
+
+class PokerActionProvider extends ActionProvider<WalletProvider> {
+    constructor() {
+        super("my-action-provider", []);
+    }
+
+    @CreateAction({
+        name: "fold",
+        description: "Folding in Texas Hold'em means forfeiting your hand and exiting the current round of betting. Once you fold, you are no longer eligible to win the pot, and you do not have to contribute any more chips to the betting round. However, you must wait for the next hand to participate again.",
+        schema: MyActionSchema,
+    })
+    async foldAction(
+        walletProvider: CdpWalletProvider,
+        args: z.infer<typeof MyActionSchema>,
+    ): Promise<string> {
+
+
+    const data = encodeFunctionData({
+        abi: pokerABI.abi,
+        functionName: "fold",
+        args:[]
+    })
+
+    const txHash = await walletProvider.sendTransaction({
+        to: contractAddress as '0x${string}',
+        data,
+    })
+
+    const receipt = await walletProvider.waitForTransactionReceipt(txHash)
+        return "Folded Successfully"
+    }
+
+    @CreateAction({
+      name: "call",
+      description: "Calling in Texas Hold'em means matching the current bet in order to stay in the hand. Unlike raising (which increases the bet) or folding (which forfeits the hand), calling simply keeps you in the game without escalating the stakes. Calling can be a strong strategic move or a costly mistake, depending on the situation. A well-timed call can set up a powerful trap for your opponents, allow you to see additional cards at a good price, or keep your range balanced. However, excessive calling (often referred to as being a calling station) can lead to losses if done without a clear reason.",
+      schema: MyActionSchema,
+    })
+    async callAction(
+      walletProvider: CdpWalletProvider,
+      args: z.infer<typeof MyActionSchema>,
+    ): Promise<string> {
+  
+  
+    const data = encodeFunctionData({
+      abi: pokerABI.abi,
+      functionName: "callBet",
+      args:[]
+    })
+  
+    const txHash = await walletProvider.sendTransaction({
+      to: contractAddress as '0x${string}',
+      data,
+    })
+  
+    const receipt = await walletProvider.waitForTransactionReceipt(txHash)
+      return "Called Successfully"
+    }     
+
+  @CreateAction({
+    name: "raise",
+    description: "Raising in Texas Hold'em means increasing the current bet amount, either after an opponent has bet or as the first action in a betting round (an open-raise). Raising is a powerful tool that can be used to build the pot, apply pressure on opponents, gain information, and protect strong hands. There are two main types of raises: Value Raise – Raising when you believe you have the best hand and want to extract more money from your opponents.Bluff Raise – Raising with a weak hand to make your opponent fold.",
+    schema: SendActionsSchema,
+  })
+  async raiseAction(
+    walletProvider: CdpWalletProvider,
+    args: z.infer<typeof SendActionsSchema>,
+    amount: bigint,
+  ): Promise<string> {
+
+
+  const data = encodeFunctionData({
+    abi: pokerABI.abi,
+    functionName: "raiseBet",
+    args:[amount]
+  })
+
+  const txHash = await walletProvider.sendTransaction({
+    to: contractAddress as '0x${string}',
+    data,
+  })
+
+  const receipt = await walletProvider.waitForTransactionReceipt(txHash)
+    return "Raised Successfully" 
+  } 
+
+  @CreateAction({
+    name: "register",
+    description: "Register to play Texas Holdem against another player",
+    schema: MyActionSchema,
+  })
+  async registerAction(
+    walletProvider: CdpWalletProvider,
+    args: z.infer<typeof MyActionSchema>,
+  ): Promise<string> {
+
+
+  const data = encodeFunctionData({
+    abi: pokerABI.abi,
+    functionName: "registerAI",
+  })
+
+  const txHash = await walletProvider.sendTransaction({
+    to: contractAddress as '0x${string}',
+    data,
+  })
+
+  const receipt = await walletProvider.waitForTransactionReceipt(txHash)
+    return "Registered Successfully" 
+  } 
+
+  @CreateAction({
+    name: "getHoleCards",
+    description: "Hole cards are the two private cards dealt face down to each player at the beginning of a Texas Hold'em hand. These are the only cards unique to each player and are not shared with others. Players use their hole cards in combination with the five community cards on the board to make the best possible five-card poker hand.",
+    schema: MyActionSchema,
+  })
+  async getHoleCards(
+    walletProvider: CdpWalletProvider,
+    args: z.infer<typeof MyActionSchema>,
+  ): Promise<string> {
+
+
+  const data = encodeFunctionData({
+    abi: pokerABI.abi,
+    functionName: "getHoleCards",
+  })
+
+  const txHash = await walletProvider.sendTransaction({
+    to: contractAddress as '0x${string}',
+    data,
+  })
+
+  const receipt = await walletProvider.waitForTransactionReceipt(txHash)
+    return "Hope you like your hand" 
+  } 
+
+  @CreateAction({
+    name: "getCommunityCards",
+    description: "Community cards are the shared face-up cards placed in the center of the table that all players can use to form their best five-card poker hand. In Texas Hold’em, a total of five community cards are dealt at the beginning of the game. Players combine their two private hole cards with the community cards to create the strongest five-card hand possible.",
+    schema: MyActionSchema,
+  })
+  async getCommunityCards(
+    walletProvider: CdpWalletProvider,
+    args: z.infer<typeof MyActionSchema>,
+  ): Promise<string> {
+
+
+  const data = encodeFunctionData({
+    abi: pokerABI.abi,
+    functionName: "getCommunityCards",
+  })
+
+  const txHash = await walletProvider.sendTransaction({
+    to: contractAddress as '0x${string}',
+    data,
+  })
+
+  const receipt = await walletProvider.waitForTransactionReceipt(txHash)
+    return "Hope you like the cards on the table" 
+  } 
+
+  @CreateAction({
+    name: "getHighestBet",
+    description: "Get the highest bet placed in your game so you can make informed decisions on how you would like to bet",
+    schema: MyActionSchema,
+  })
+  async getHighestBet(
+    walletProvider: CdpWalletProvider,
+    args: z.infer<typeof MyActionSchema>,
+  ): Promise<string> {
+
+
+  const data = encodeFunctionData({
+    abi: pokerABI.abi,
+    functionName: "getHighestBet",
+  })
+
+  const txHash = await walletProvider.sendTransaction({
+    to: contractAddress as '0x${string}',
+    data,
+  })
+
+  const receipt = await walletProvider.waitForTransactionReceipt(txHash)
+    return "Are you going to call, raise or fold?" 
+  } 
+
+  @CreateAction({
+    name: "getAIBalances",
+    description: "Get the balances of all players so you can make a more informed decision on if you want to call, raise, or fold.",
+    schema: MyActionSchema,
+  })
+  async getAIBalances(
+    walletProvider: CdpWalletProvider,
+    args: z.infer<typeof MyActionSchema>,
+  ): Promise<string> {
+
+
+  const data = encodeFunctionData({
+    abi: pokerABI.abi,
+    functionName: "getAIBalances",
+  })
+
+  const txHash = await walletProvider.sendTransaction({
+    to: contractAddress as '0x${string}',
+    data,
+  })
+
+  const receipt = await walletProvider.waitForTransactionReceipt(txHash)
+    return "Hope you like the cards on the table" 
+  } 
+  
+    supportsNetwork = (network: Network) => true;
+}
+
+export const myPokerProvider = () => new PokerActionProvider();
+
 async function initializeAgent() {
   try {
     // Initialize LLM
@@ -99,13 +338,16 @@ async function initializeAgent() {
     const agentkit = await AgentKit.from({
       walletProvider,
       actionProviders: [
+        myPokerProvider(),
+        walletActionProvider(),
         cdpApiActionProvider({
           apiKeyName: process.env.CDP_API_KEY_NAME,
           apiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY?.replace(
             /\\n/g,
             "\n",
-          ),
+          ), 
         }),
+        
       ],
     });
 

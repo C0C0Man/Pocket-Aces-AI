@@ -26,7 +26,7 @@ class MyActionProvider extends ActionProvider<WalletProvider> {
 
     @CreateAction({
         name: "fold",
-        description: "In order to not lose any more money. You forfit the pot by folding your hand",
+        description: "Folding in Texas Hold'em means forfeiting your hand and exiting the current round of betting. Once you fold, you are no longer eligible to win the pot, and you do not have to contribute any more chips to the betting round. However, you must wait for the next hand to participate again.",
         schema: MyActionSchema,
     })
     async myAction(

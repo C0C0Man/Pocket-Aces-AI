@@ -58,6 +58,7 @@
     "@langchain/openai": "^0.3.14",
     "dotenv": "^16.4.7",
     "langchain-xai": "^0.2.2",
+    "viem": "^2.23.5",
     "zod": "^3.24.2"
   }
 }
