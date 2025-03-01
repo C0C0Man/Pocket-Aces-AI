@@ -109,7 +109,7 @@ async function getRegisteredAIPlayers(contract: ethers.Contract) {
     console.log("Getting registered AI players...");
     
     // Check player addresses (up to a reasonable limit)
-    const playerAddresses = [];
+    const playerAddresses: string[] = [];
     for (let i = 0; i < 10; i++) {
       try {
         const address = await contract.playerAddresses(i);
@@ -140,7 +140,7 @@ async function joinAsSpectator(contract: ethers.Contract, wallet: ethers.Wallet)
     console.log("Getting AI players to bet on...");
     
     // Check player addresses
-    const playerAddresses = [];
+    const playerAddresses: string[] = [];
     for (let i = 0; i < 10; i++) {
       try {
         const address = await contract.playerAddresses(i);
@@ -288,7 +288,7 @@ async function getAIBalances(contract: ethers.Contract) {
     const balances = await contract.getAIBalances();
     
     // Get player addresses to match with balances
-    const playerAddresses = [];
+    const playerAddresses: string[] = [];
     for (let i = 0; i < balances.length; i++) {
       try {
         const address = await contract.playerAddresses(i);
